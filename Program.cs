@@ -4,6 +4,7 @@ using RecipeManager.Repositories;
 using RecipeManager.Services;
 using Spectre.Console;
 using RecipeManager.Helpers;
+using RecipeManager.DatabaseOperations;
 
 namespace RecipeManager
 {
@@ -11,16 +12,29 @@ namespace RecipeManager
     {
         static async Task Main(string[] args)
         {
-            // build configuration
+            // Build configuration
             var serviceProvider = new ServiceCollection()
                 .AddDbContext<RecipeContext>()
                 .AddScoped(typeof(GenericRepository<>))
                 .AddScoped<RecipeService>()
+                .AddTransient<RecipeManager.DatabaseOperations.DatabaseOperations>() // Ensure DatabaseOperations is added here
                 .BuildServiceProvider();
+
+            // Use the services
+            var dbOps = serviceProvider.GetService<RecipeManager.DatabaseOperations.DatabaseOperations>();
+            if (dbOps != null)
+            {
+                await dbOps.CreateTablesAsync();
+            }
+            else
+            {
+                AnsiConsole.MarkupLine("[red]Failed to create DatabaseOperations service.[/]");
+                return;
+            }
 
             var recipeService = serviceProvider.GetService<RecipeService>();
 
-            //command line interface loop
+            // Command line interface loop
             while (true)
             {
                 ShowMainMenuHeading();
